@@ -1,0 +1,91 @@
+zabbix_export:
+  version: '6.0'
+  date: '2022-12-09T18:06:06Z'
+  groups:
+    -
+      uuid: 57b7ae836ca64446ba2c296389c009b7
+      name: Templates/Modules
+  templates:
+    -
+      uuid: 314873a30e264b53bd66b55e3d23fe49
+      template: AIREOS-CPU-SNMP
+      name: AIREOS-CPU-SNMP
+      description: |
+        Template for monitoring CPU utilization.
+        
+        Tested on Cisco AireOS WLC 5520
+        
+        --Jørn Ivar Holland
+      groups:
+        -
+          name: Templates/Modules
+      items:
+        -
+          uuid: 79881ae1a8e54b538a8ceaf9baa36fd6
+          name: 'CPU utilization'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#CPU.UTIL},1.3.6.1.4.1.9.9.618.1.8.8]'
+          key: system.cpu.util
+          delay: 5m
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          description: 'This object specifies the current percent usage of all CPUs. This MIB should be updated every clsSysStatsSamplingInterval.'
+          preprocessing:
+            -
+              type: JSONPATH
+              parameters:
+                - '$..[''{#CPU.UTIL}''].avg()'
+          tags:
+            -
+              tag: component
+              value: cpu
+          triggers:
+            -
+              uuid: 1524a206a0e5471383d6387664b93f42
+              expression: 'min(/AIREOS-CPU-SNMP/system.cpu.util,10m)>{$CPU.UTIL.CRIT}'
+              name: 'High CPU utilization (over {$CPU.UTIL.CRIT}% for 5m)'
+              opdata: 'Current utilization: {ITEM.LASTVALUE1}'
+              priority: AVERAGE
+              description: 'CPU utilization is too high. The system might be slow to respond.'
+              tags:
+                -
+                  tag: scope
+                  value: capacity
+                -
+                  tag: scope
+                  value: performance
+            -
+              uuid: db998e675d0d4cb99dc967f1283cd46d
+              expression: 'min(/AIREOS-CPU-SNMP/system.cpu.util,5m)>{$CPU.UTIL.WARN}'
+              name: 'High CPU utilization (over {$CPU.UTIL.WARN}% for 5m)'
+              opdata: 'Current utilization: {ITEM.LASTVALUE1}'
+              priority: WARNING
+              description: 'CPU utilization is high. The system might be slow to respond.'
+              tags:
+                -
+                  tag: scope
+                  value: capacity
+                -
+                  tag: scope
+                  value: performance
+      macros:
+        -
+          macro: '{$CPU.UTIL.CRIT}'
+          value: '90'
+        -
+          macro: '{$CPU.UTIL.WARN}'
+          value: '75'
+  graphs:
+    -
+      uuid: 3482550f6f6f4b5380f3a5a5deff2587
+      name: 'CPU utilization'
+      ymin_type_1: FIXED
+      ymax_type_1: FIXED
+      graph_items:
+        -
+          drawtype: GRADIENT_LINE
+          color: 1A7C11
+          item:
+            host: AIREOS-CPU-SNMP
+            key: system.cpu.util

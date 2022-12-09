@@ -1,0 +1,413 @@
+zabbix_export:
+  version: '6.0'
+  date: '2022-12-09T18:06:27Z'
+  groups:
+    -
+      uuid: 57b7ae836ca64446ba2c296389c009b7
+      name: Templates/Modules
+  templates:
+    -
+      uuid: 4eba9ed3a0e84ab59b2f680d2a65a406
+      template: AIREOS-AP-STATUS-SNMP
+      name: AIREOS-AP-STATUS-SNMP
+      description: |
+        Template for monitoring Access Point Status
+        
+        Tested on Cisco AireOS WLC 5520
+        
+        -- Jørn Ivar Holland
+      groups:
+        -
+          name: Templates/Modules
+      items:
+        -
+          uuid: 8d5d35926fe447acbee0ba4bba4de5e1
+          name: 'Total number of clients'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.9.9.618.1.8.12.0
+          key: clsMaxClientsCount
+          delay: 5m
+          history: 30d
+          units: clients
+          description: |
+            clsMaxClientsCount OBJECT-TYPE
+            SYNTAX Unsigned32
+            MAX-ACCESS read-only
+            STATUS current
+            DESCRIPTION
+            "This object represents the maximum clients present on the controller."
+          tags:
+            -
+              tag: component
+              value: system
+        -
+          uuid: e4762a04d038446faa5931d4134467d5
+          name: 'Total number of APs'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.9.9.618.1.8.4.0
+          key: clsSysApConnectCount
+          delay: 5m
+          history: 30d
+          units: APs
+          description: |
+            clsSysApConnectCount OBJECT-TYPE
+            SYNTAX Unsigned32
+            MAX-ACCESS read-only
+            STATUS current
+            DESCRIPTION
+            "This object specifies the count of AP's that are connected with WLC"
+          tags:
+            -
+              tag: component
+              value: system
+          triggers:
+            -
+              uuid: a3c705a8848340e99e4a25ec0b743e24
+              expression: '(last(/AIREOS-AP-STATUS-SNMP/clsSysApConnectCount,#2) / last(/AIREOS-AP-STATUS-SNMP/clsSysApConnectCount))*100 < 5'
+              name: 'Number of connected APs reduced by over 5%'
+              priority: HIGH
+              manual_close: 'YES'
+              tags:
+                -
+                  tag: scope
+                  value: availability
+      discovery_rules:
+        -
+          uuid: fda7cc9e50b5450ea2f0668f052a3958
+          name: 'AP Status Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#AP_NAME},1.3.6.1.4.1.14179.2.2.1.1.3]'
+          key: bsnAPName
+          delay: 6h
+          description: |
+            bsnAPName OBJECT-TYPE
+            SYNTAX OCTET STRING (SIZE (0..32))
+            MAX-ACCESS read-write
+            STATUS current
+            DESCRIPTION
+            "Name assigned to this AP. If an AP is not configured its factory default name will be ap:<last three byte of MACAddress> eg. ap:af:12:be"
+          item_prototypes:
+            -
+              uuid: 2dc4effb2338411397e0a3f42a8c520b
+              name: '{#AP_NAME}: Admin Status'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.1.1.37.{#SNMPINDEX}'
+              key: 'bsnAPAdminStatus[{#SNMPINDEX}]'
+              delay: 10m
+              history: 30d
+              description: 'Admin State of the AP'
+              valuemap:
+                name: bsnAPAdminStatus
+              tags:
+                -
+                  tag: component
+                  value: ap
+              trigger_prototypes:
+                -
+                  uuid: a07a139042194673a0ea74edfbad16c6
+                  expression: 'last(/AIREOS-AP-STATUS-SNMP/bsnAPAdminStatus[{#SNMPINDEX}])=2'
+                  name: '{#AP_NAME} is administratively disabled'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} has administrative status disabled. Please check the configuration.'
+                  manual_close: 'YES'
+                  tags:
+                    -
+                      tag: scope
+                      value: availability
+            -
+              uuid: 14a5d787fa77422dab9bc65ef99beb69
+              name: '{#AP_NAME} Radio 0: Admin Status'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.34.{#SNMPINDEX}.1'
+              key: 'bsnAPIfAdminStatus[{#SNMPINDEX}.0]'
+              delay: 10m
+              history: 30d
+              description: 'Admin status of the interface.'
+              valuemap:
+                name: bsnAPAdminStatus
+              tags:
+                -
+                  tag: component
+                  value: radio
+              trigger_prototypes:
+                -
+                  uuid: a6fec5e537e4417e908a1e7a53423b6c
+                  expression: 'last(/AIREOS-AP-STATUS-SNMP/bsnAPIfAdminStatus[{#SNMPINDEX}.0])=2'
+                  name: '{#AP_NAME} Radio 0 is administratively disabled'
+                  priority: INFO
+                  tags:
+                    -
+                      tag: scope
+                      value: availability
+            -
+              uuid: 0dd1786b59f44bebbf4d86b102a05257
+              name: '{#AP_NAME} Radio 1: Admin Status'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.34.{#SNMPINDEX}.1'
+              key: 'bsnAPIfAdminStatus[{#SNMPINDEX}.1]'
+              delay: 10m
+              history: 30d
+              description: 'Admin status of the interface.'
+              valuemap:
+                name: bsnAPIfAdminStatus
+              tags:
+                -
+                  tag: component
+                  value: radio
+            -
+              uuid: 5acc7a9ea007427f9b2a40460013fdfa
+              name: '{#AP_NAME} Radio 0: Interface Type'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.2.{#SNMPINDEX}.0'
+              key: 'bsnAPIfEntry[{#SNMPINDEX}.0]'
+              delay: 15m
+              history: 30d
+              description: 'The type of this interface.'
+              valuemap:
+                name: bsnAPIfType
+              tags:
+                -
+                  tag: component
+                  value: radio
+            -
+              uuid: b64d9b4d6baa4970bb6b4780ce183f1e
+              name: '{#AP_NAME} Radio 1: Interface Type'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.2.{#SNMPINDEX}.1'
+              key: 'bsnAPIfEntry[{#SNMPINDEX}.1]'
+              delay: 15m
+              history: 30d
+              description: 'The type of this interface.'
+              valuemap:
+                name: bsnAPIfType
+              tags:
+                -
+                  tag: component
+                  value: radio
+            -
+              uuid: dc8b745fe02c4edeac57288f4695b005
+              name: '{#AP_NAME} Radio 0: Connected Clients'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.15.{#SNMPINDEX}.0'
+              key: 'bsnApIfNoOfUsers[{#SNMPINDEX}.0]'
+              delay: 10m
+              history: 30d
+              units: clients
+              description: 'No of Users associated with this radio.'
+              tags:
+                -
+                  tag: component
+                  value: radio
+            -
+              uuid: c520e4e470564a0b8c0c2b493b20d0f4
+              name: '{#AP_NAME} Radio 1: Connected Clients'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.15.{#SNMPINDEX}.1'
+              key: 'bsnApIfNoOfUsers[{#SNMPINDEX}.1]'
+              delay: 10m
+              history: 30d
+              units: clients
+              description: 'No of Users associated with this radio.'
+              tags:
+                -
+                  tag: component
+                  value: radio
+            -
+              uuid: c4b1e4ce6d984811bc754579feda0290
+              name: '{#AP_NAME} Radio 0: Operational State'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.12.{#SNMPINDEX}.0'
+              key: 'bsnAPIfOperStatus[{#SNMPINDEX}.0]'
+              delay: 10m
+              history: 30d
+              description: 'Operational status of the interface.'
+              valuemap:
+                name: bsnAPIfOperStatus
+              tags:
+                -
+                  tag: component
+                  value: radio
+              trigger_prototypes:
+                -
+                  uuid: 504f0687ac3b4cdcb61577f5e9aa1dad
+                  expression: 'last(/AIREOS-AP-STATUS-SNMP/bsnAPIfOperStatus[{#SNMPINDEX}.0])=1'
+                  name: '{#AP_NAME} Radio 0 is down'
+                  priority: WARNING
+                  description: '{#AP_NAME} Radio 0 is in operational state down'
+                  tags:
+                    -
+                      tag: scope
+                      value: availability
+            -
+              uuid: 06ad37385c9548118aa6f82c2d9b1388
+              name: '{#AP_NAME} Radio 1: Operational State'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.2.1.12.{#SNMPINDEX}.1'
+              key: 'bsnAPIfOperStatus[{#SNMPINDEX}.1]'
+              delay: 10m
+              history: 30d
+              description: 'Operational status of the interface.'
+              valuemap:
+                name: bsnAPIfOperStatus
+              tags:
+                -
+                  tag: component
+                  value: radio
+              trigger_prototypes:
+                -
+                  uuid: 36edcb42c33c49dbb5f79d543f57f5e6
+                  expression: 'last(/AIREOS-AP-STATUS-SNMP/bsnAPIfOperStatus[{#SNMPINDEX}.1])=1'
+                  name: '{#AP_NAME} Radio 1 is down'
+                  priority: WARNING
+                  description: '{#AP_NAME} Radio 1 is in operational state down'
+                  manual_close: 'YES'
+                  tags:
+                    -
+                      tag: scope
+                      value: availability
+            -
+              uuid: 9d097a2a8f7d431e988347745f62081a
+              name: '{#AP_NAME}: Model'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.1.1.16.{#SNMPINDEX}'
+              key: 'bsnAPModel[{#SNMPINDEX}]'
+              delay: 30m
+              trends: '0'
+              value_type: TEXT
+              description: 'AP Model'
+              tags:
+                -
+                  tag: component
+                  value: ap
+            -
+              uuid: c6e14731e3c74e598385a0f70b3a19c5
+              name: '{#AP_NAME}: Operation State'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.1.1.6.{#SNMPINDEX}'
+              key: 'bsnAPOperationStatus[{#SNMPINDEX}]'
+              delay: 6m
+              history: 30d
+              description: 'Operation State of the AP. When AP associates with the Airespace Switch its state will be associated. When Airespace AP is disassociated from the Switch, its state will be disassociating. The state is downloading when the AP is downloading its firmware.'
+              valuemap:
+                name: bsnAPOperationStatus
+              tags:
+                -
+                  tag: component
+                  value: ap
+              trigger_prototypes:
+                -
+                  uuid: f4e8f98874224c7eb780e7b0ca5c30c9
+                  expression: 'nodata(/AIREOS-AP-STATUS-SNMP/bsnAPOperationStatus[{#SNMPINDEX}],13m)=1'
+                  name: '{#AP_NAME} has no heartbeats'
+                  priority: AVERAGE
+                  description: 'No heartbeats within 10 minutes from LAP {#AP_NAME}'
+                  manual_close: 'YES'
+                  tags:
+                    -
+                      tag: scope
+                      value: availability
+                -
+                  uuid: b57143c5c0994ed0ae84b7ce30c48be1
+                  expression: 'last(/AIREOS-AP-STATUS-SNMP/bsnAPOperationStatus[{#SNMPINDEX}])=2'
+                  name: '{#AP_NAME} is in operational state disassociating'
+                  priority: WARNING
+                  description: '{#AP_NAME} is disassociating from the WLC.'
+                  tags:
+                    -
+                      tag: scope
+                      value: availability
+                -
+                  uuid: 4fa4fbe119894d3db8c5fcaa9860cb03
+                  expression: 'last(/AIREOS-AP-STATUS-SNMP/bsnAPOperationStatus[{#SNMPINDEX}])=3'
+                  name: '{#AP_NAME} is in operational state downloading'
+                  priority: INFO
+                  description: '{#AP_NAME} is downloading firmware from the WLC.'
+                  tags:
+                    -
+                      tag: scope
+                      value: availability
+            -
+              uuid: 21b3239b6110484e9353db33b18b1bc8
+              name: '{#AP_NAME}: Serial number'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.4.1.14179.2.2.1.1.17.{#SNMPINDEX}'
+              key: 'bsnAPSerialNumber[{#SNMPINDEX}]'
+              delay: 30m
+              trends: '0'
+              value_type: TEXT
+              description: 'AP Serial Number.'
+              tags:
+                -
+                  tag: component
+                  value: ap
+              trigger_prototypes:
+                -
+                  uuid: 82b8070d7dac472e971a6f3912fc3dd7
+                  expression: '(last(/AIREOS-AP-STATUS-SNMP/bsnAPSerialNumber[{#SNMPINDEX}],#1)<>last(/AIREOS-AP-STATUS-SNMP/bsnAPSerialNumber[{#SNMPINDEX}],#2))=1 and length(last(/AIREOS-AP-STATUS-SNMP/bsnAPSerialNumber[{#SNMPINDEX}]))>0'
+                  name: 'Serial Number has changed'
+                  priority: INFO
+                  manual_close: 'YES'
+                  tags:
+                    -
+                      tag: scope
+                      value: notice
+                    -
+                      tag: scope
+                      value: security
+      valuemaps:
+        -
+          uuid: d90a489301b04691a95d51a09c704991
+          name: bsnAPAdminStatus
+          mappings:
+            -
+              value: '1'
+              newvalue: enable
+            -
+              value: '2'
+              newvalue: disable
+        -
+          uuid: edea176dcd614c3699f7abd1ee5af33a
+          name: bsnAPIfAdminStatus
+          mappings:
+            -
+              value: '1'
+              newvalue: enable
+            -
+              value: '2'
+              newvalue: disable
+        -
+          uuid: b7f782a9136a497483d7ecf022175392
+          name: bsnAPIfOperStatus
+          mappings:
+            -
+              value: '1'
+              newvalue: down
+            -
+              value: '2'
+              newvalue: up
+        -
+          uuid: 5b1f85093ff34cbd9f89cc81ddb7076d
+          name: bsnAPIfType
+          mappings:
+            -
+              value: '1'
+              newvalue: 802.11b/g/n
+            -
+              value: '2'
+              newvalue: 802.11a/n/ac
+            -
+              value: '3'
+              newvalue: 802.11a/b/g/n
+        -
+          uuid: aa655404c4364f8bad821f86d79832a2
+          name: bsnAPOperationStatus
+          mappings:
+            -
+              value: '1'
+              newvalue: associated
+            -
+              value: '2'
+              newvalue: disassociating
+            -
+              value: '3'
+              newvalue: downloading
