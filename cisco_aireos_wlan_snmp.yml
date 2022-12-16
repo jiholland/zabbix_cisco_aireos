@@ -1,6 +1,6 @@
 zabbix_export:
   version: '6.0'
-  date: '2022-12-12T08:23:30Z'
+  date: '2022-12-16T11:36:13Z'
   groups:
     -
       uuid: 57b7ae836ca64446ba2c296389c009b7
@@ -11,11 +11,11 @@ zabbix_export:
       template: AIREOS-WLAN-STATUS-SNMP
       name: AIREOS-WLAN-STATUS-SNMP
       description: |
-        Template for monitoring the WLAN status.
+        Template for monitoring WLAN status by SNMP on Cisco WLC platform.
         
-        Tested on Cisco AireOS WLC 5520
+        Tested on Cisco AireOS WLC 5520.
         
-        --Jørn Ivar Holland
+        Jørn Ivar Holland
       groups:
         -
           name: Templates/Modules
@@ -85,6 +85,21 @@ zabbix_export:
                 -
                   tag: component
                   value: wlan
+          preprocessing:
+            -
+              type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 4h
+      tags:
+        -
+          tag: class
+          value: network
+        -
+          tag: target
+          value: cisco
+        -
+          tag: target
+          value: cisco-aireos
       valuemaps:
         -
           uuid: 550921e86f0a434591f8b364c3e3049d
